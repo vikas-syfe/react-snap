@@ -1,11 +1,15 @@
 {
-  "name": "react-snap",
+  "name": "@svavacapital/react-snap",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "repository": {
+    "url": "git@github.com:SvavaCapital/react-snap.git"
+  },
   "version": "1.23.0",
   "description": "Zero-configuration framework-agnostic static prerendering for SPAs",
   "main": "index.js",
-  "author": "stereobooster",
   "license": "MIT",
-  "repository": "stereobooster/react-snap",
   "engines": {
     "node": ">= 8.6.0"
   },
