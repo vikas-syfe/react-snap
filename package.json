@@ -1,8 +1,5 @@
 {
   "name": "@svavacapital/react-snap",
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
-  },
   "repository": {
     "url": "git@github.com:SvavaCapital/react-snap.git"
   },
