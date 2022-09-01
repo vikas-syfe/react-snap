@@ -140,7 +140,8 @@ const crawl = async opt => {
     afterFetch,
     onEnd,
     publicPath,
-    sourceDir
+    sourceDir,
+    baseHostname
   } = opt;
   let shuttingDown = false;
   let streamClosed = false;
@@ -185,8 +186,11 @@ const crawl = async opt => {
     // we are converting both to string to be sure
     // Port can be null, therefore we need the null check
     const isOnAppPort = port && port.toString() === options.port.toString();
-
-    if (hostname === "localhost" && isOnAppPort && !uniqueUrls.has(newUrl) && !streamClosed) {
+    const isHostedCorrectly =
+      (options.remoteBaseUrl && hostname === baseHostname) ||
+      (hostname === "localhost" && isOnAppPort);
+    
+    if(isHostedCorrectly && !uniqueUrls.has(newUrl) && !streamClosed) {
       uniqueUrls.add(newUrl);
       enqued++;
       queue.write(newUrl);
@@ -263,7 +267,7 @@ const crawl = async opt => {
       }
     } else {
       // this message creates a lot of noise
-      // console.log(`🚧  skipping (${processed + 1}/${enqued}) ${route}`);
+      console.log(`🚧  skipping (${processed + 1}/${enqued}) ${route}`);
     }
     processed++;
     if (enqued === processed) {

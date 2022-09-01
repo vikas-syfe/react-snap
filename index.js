@@ -76,7 +76,9 @@ const defaultOptions = {
   //# another feature creep
   // tribute to Netflix Server Side Only React https://twitter.com/NetflixUIE/status/923374215041912833
   // but this will also remove code which registers service worker
-  removeScriptTags: false
+  removeScriptTags: false,
+  // remote url for prerendering
+  remoteBaseUrl: null,
 };
 
 /**
@@ -132,6 +134,10 @@ const defaults = userOptions => {
   if (!options.publicPath.startsWith("/")) {
     options.publicPath = `/${options.publicPath}`;
   }
+
+  if(options.remoteBaseUrl){
+    options.externalServer = true;
+  }
   options.publicPath = options.publicPath.replace(/\/$/, "");
 
   options.include = options.include.map(
@@ -154,7 +160,8 @@ const preloadResources = opt => {
     cacheAjaxRequests,
     preconnectThirdParty,
     http2PushManifest,
-    ignoreForPreload
+    ignoreForPreload,
+    baseHostname
   } = opt;
   const ajaxCache = {};
   const http2PushManifestItems = [];
@@ -164,7 +171,7 @@ const preloadResources = opt => {
     if (/^data:|blob:/i.test(responseUrl)) return;
     const ct = response.headers()["content-type"] || "";
     const route = responseUrl.replace(basePath, "");
-    if (/^http:\/\/localhost/i.test(responseUrl)) {
+    if (/^http:\/\/localhost/i.test(responseUrl) || responseUrl.includes(baseHostname)) {
       if (uniqueResources.has(responseUrl)) return;
       if (preloadImages && /\.(png|jpg|jpeg|webp|gif|svg)$/.test(responseUrl)) {
         if (http2PushManifest) {
@@ -679,21 +686,28 @@ const run = async (userOptions, { fs } = { fs: nativeFs }) => {
     return Promise.reject("");
   }
 
-  fs.createReadStream(path.join(sourceDir, "index.html")).pipe(
-    fs.createWriteStream(path.join(sourceDir, "200.html"))
-  );
-
-  if (destinationDir !== sourceDir && options.saveAs === "html") {
+  if(options.remoteBaseUrl){
     mkdirp.sync(destinationDir);
+    fs.createWriteStream(path.join(destinationDir, "200.html")).write("Build is started on remote url");
+  }
+  else{
     fs.createReadStream(path.join(sourceDir, "index.html")).pipe(
-      fs.createWriteStream(path.join(destinationDir, "200.html"))
+      fs.createWriteStream(path.join(sourceDir, "200.html"))
     );
+
+    if (destinationDir !== sourceDir && options.saveAs === "html") {
+      mkdirp.sync(destinationDir);
+      fs.createReadStream(path.join(sourceDir, "index.html")).pipe(
+        fs.createWriteStream(path.join(destinationDir, "200.html"))
+      );
+    }
   }
 
   const server = options.externalServer ? null : startServer(options);
 
-  const basePath = `http://localhost:${options.port}`;
+  const basePath = options.remoteBaseUrl ? options.remoteBaseUrl : `http://localhost:${options.port}`;
   const publicPath = options.publicPath;
+  const baseHostname = options.remoteBaseUrl ? url.parse(options.remoteBaseUrl).hostname : 'localhost';
   const ajaxCache = {};
   const { http2PushManifest } = options;
   const http2PushManifestItems = {};
@@ -702,6 +716,7 @@ const run = async (userOptions, { fs } = { fs: nativeFs }) => {
     options,
     basePath,
     publicPath,
+    baseHostname,
     sourceDir,
     beforeFetch: async ({ page, route }) => {
       const {
@@ -723,7 +738,8 @@ const run = async (userOptions, { fs } = { fs: nativeFs }) => {
             cacheAjaxRequests,
             preconnectThirdParty,
             http2PushManifest,
-            ignoreForPreload: options.ignoreForPreload
+            ignoreForPreload: options.ignoreForPreload,
+            baseHostname,
           }
         );
         ajaxCache[route] = ac;
